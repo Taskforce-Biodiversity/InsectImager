@@ -7,6 +7,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "nuitka"
+version = "0.7.7"
+description = "Python compiler with full language support and CPython compatibility"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "numpy"
 version = "1.22.3"
 description = "NumPy is the fundamental package for array computing with Python."
@@ -56,7 +64,7 @@ cp2110 = ["hidapi"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "aa94d19d2d8b6e16317fb41239f90034b038d905b5d3ce55bf7725e164873be9"
+content-hash = "d6a6dceeda11c90bf8fd9945eef41ad8619434db8572aa638ddc62cea607e3e1"
 
 [metadata.files]
 gphoto2 = [
@@ -71,6 +79,9 @@ gphoto2 = [
     {file = "gphoto2-2.3.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:1ecde47560537f653ee01f152d5ad08f61872a7dd73813f7aaf6ce2b93ade857"},
     {file = "gphoto2-2.3.3-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:cf2616edc6a79a9473e53d02cde612a851b49ebb11ebcd1270d229a53dba8305"},
     {file = "gphoto2-2.3.3.tar.gz", hash = "sha256:6e11c6bd41b35eb93bb27333bfe4747ddfe09d94c5277c5fb1ee62d8aae99772"},
+]
+nuitka = [
+    {file = "Nuitka-0.7.7.tar.gz", hash = "sha256:c2bac25edae92d3ab00f6d16f9e32e5f25f55508e1e380b0ab0120e46e4b1767"},
 ]
 numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:92bfa69cfbdf7dfc3040978ad09a48091143cffb778ec3b03fa170c494118d75"},

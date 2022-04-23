@@ -12,6 +12,7 @@ pyserial = "^3.5"
 gphoto2 = "^2.3.3"
 Pillow = "^9.1.0"
 numpy = "^1.22.3"
+Nuitka = "^0.7.7"
 
 [build-system]
 requires = ["poetry-core"]
