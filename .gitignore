@@ -1,4 +1,4 @@
 .idea
-/InsectImager.build/
-/InsectImager.bin
-/InsectImager.dist/
+/build_binary/InsectImager.bin
+/build_binary/InsectImager.build/
+/build_binary/InsectImager.dist/

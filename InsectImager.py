@@ -201,7 +201,7 @@ class Settings:
     def find_comports(self):
         comports = list()
         for i in serial.tools.list_ports.comports():
-            # print(type(serial.tools.list_ports.comports()))
+            # print(type(serial.build_binary.list_ports.comports()))
             # d = serial.Serial(i[0])
             # print ('%s - ' % i[0] , d.isOpen())
             # print(i[0])
