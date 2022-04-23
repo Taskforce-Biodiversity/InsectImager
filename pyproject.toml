@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "insectimager"
+version = "0.1.0"
+description = ""
+authors = ["A.S. Boerema"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+opencv-contrib-python = "^4.5.5.64"
+pyserial = "^3.5"
+gphoto2 = "^2.3.3"
+Pillow = "^9.1.0"
+numpy = "^1.22.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
