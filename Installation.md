@@ -3,8 +3,8 @@
 ## source installation from github on linux 
 
 ### requirements
-- git (for cloning the repository)
-- curl for 
+- git (for cloning the repository).
+- curl for getting the poetry install script.
 - pyenv (for managing and containing the required python version in a virtual environment.)  
   https://github.com/pyenv/pyenv
 - poetry (for managing all the libraries in the correct versions, that the app depends on.)  
