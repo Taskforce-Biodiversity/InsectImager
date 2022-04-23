@@ -2,7 +2,7 @@
 Software to control the photo setup to take pictures of well-plates and sticky-traps.
 
 ## Installation
-follow the [instructions](https://github.com/Taskforce-Biodiversity/InsectImager/Installation.md) to install from source on linux
+follow the [instructions](Installation.md) to install from source on linux
 
 ## Hardware
 The setup uses a:
