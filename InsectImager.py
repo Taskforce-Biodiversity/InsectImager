@@ -4,7 +4,7 @@ Created on Sun Apr 16 2022
 @author: Ate
 @version: 1.0
 """
-
+import webbrowser
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog as fd
@@ -948,24 +948,29 @@ class Move:
 class Help:
 
     def __init__(self, parent):
-        frame = ttk.Frame(parent, padding="10 10 10 10")
+        frame = ttk.Frame(parent, padding="20 20 20 20")
         frame.grid(column=0, row=0, sticky=(N, W, E, S))
 
         ttk.Label(frame, text="Taskforce Kleine Biodiversiteit\n\n"
                               "Lectorate Bees and Biodiversity\n"
                               "Van Hall Larenstein University of applied sciences\n\n"
                               "For now you are on your own ;-)\n"
-                              "If you really need help try: the Readme:\n\n"
-                              "TODO: add link to readme.md \n\n"
-                              "Issues / bugs can be reported on github: \n"
-                              "TODO: \n"
-                              "add link to the github issue tracker").grid(row=0, column=0)
+                              "If you really need help try the readme").grid(row=0, column=0, sticky=NW)
+        link1 = ttk.Label(frame, text="https://github.com/Taskforce-Biodiversity/InsectImager#readme ")
+        link1.grid(row=1, column=0, sticky=NW)
+        link1.bind("<Button-1>", lambda e: self.open_url("https://github.com/Taskforce-Biodiversity/InsectImager#readme"))
+        link2 = ttk.Label(frame, text="https://github.com/Taskforce-Biodiversity/InsectImager/issues")
+        link2.grid(row=2, column=0, sticky=(W, E))
+        link2.bind("<Button-1>", lambda e: self.open_url("https://github.com/Taskforce-Biodiversity/InsectImager/issues "))
 
         fname = "assets/tf_kbd_gst.jpg"
         pimg = ImageTk.PhotoImage(Image.open(fname))
         imglabel = ttk.Label(frame, image=pimg)
         imglabel.image = pimg
-        imglabel.grid(row=0, column=1)
+        imglabel.grid(row=0, column=1, rowspan=3)
+
+    def open_url(self, url):
+        webbrowser.open_new_tab(url)
 
 
 if __name__ == '__main__':
