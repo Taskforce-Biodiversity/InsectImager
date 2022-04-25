@@ -171,6 +171,7 @@ class Settings:
     def check_max_existing_plate_nr(self):
         max_plt = 0
         max_plt_apnd = 0
+        pltnr = 0
         appendstr = self.project_name + "_" + self.sample_name + "_"
 
         for imf in os.listdir(self.project_sample_path):
