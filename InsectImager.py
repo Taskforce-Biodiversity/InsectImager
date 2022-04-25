@@ -38,11 +38,9 @@ class Main:
         tabcontrol.add(st, text='sticky-traps')
         tabcontrol.add(mvt, text='move xy-table')
         tabcontrol.add(hlp, text='help/about')
-
         def update_tabs():
             self.Wellplate = Wellplate(wps, settings)
-            # self.Stickytrap = Stickytrap(st, settings)
-
+            self.Stickytrap = Stickytrap(st, settings)
         tabcontrol.bind('<<NotebookTabChanged>>', lambda e: update_tabs())
         tabcontrol.grid(column=0, row=0)
 
@@ -64,7 +62,7 @@ class Settings:
     nr_wp = 1  # number of wellplates to scan
     wp_type = 6  # well plate type, number of wells per plate
     # the path were imaged wells can be saved
-    safe_path = os.path.join(Path.home(), "wellplateScanner/samples/")
+    safe_path = os.path.join(Path.home(), "InsectImager/data/")
     safe_temp_path = os.path.join(safe_path, ".tempfiles/")
     project_name = "default-project"   # project name
     sample_name = "default-sample"  # sample name
@@ -139,6 +137,12 @@ class Settings:
                      [263, 0], [263, 39], [263, 78], [302, 0], [302, 39], [302, 78]]
 
     # 48W
+
+    # default stickytraps no overlap
+    caps_per_st = 4
+    nr_crops_st = 1
+    xy_st_coords = [[390, 0], [390, 77], [390, 154], [390, 231], [390, 308], [390, 385]]
+    #xy_st_coords = [[399, 0], [399, 75], [399, 150], [399, 225], [399, 300], [399, 375]]
 
     # delay in taking picture to avoid shaking table/camera after movement (in seconds)
     cam_capture_delay = 2
@@ -275,14 +279,21 @@ class SettingsTab:
                                         validatecommand=self.validate_entry_wrapper)
         self.prj_name_entry.grid(row=0, column=1)
         self.prj_name.set(self.s.project_name)
-        self.prj_name.trace_add("write", self.upd_prj_name)
+
+        def callback_upd_prj_name(var, index, mode):
+            self.upd_prj_name()
+        self.prj_name.trace_add("write", callback_upd_prj_name)
 
         self.sp_name = StringVar()
         self.sp_name_entry = ttk.Entry(spframe, textvariable=self.sp_name, validate='key',
                                        validatecommand=self.validate_entry_wrapper)
         self.sp_name_entry.grid(row=1, column=1)
         self.sp_name.set(self.s.sample_name)
-        self.sp_name.trace_add("write", self.upd_sp_name)
+
+        def callback_upd_sp_name(var, index, mode):
+            self.upd_sp_name()
+
+        self.sp_name.trace_add("write", callback_upd_sp_name)
 
         self.prj_fn_add = BooleanVar()
         self.prj_fn_add_check = ttk.Checkbutton(spframe,
@@ -403,7 +414,7 @@ class SettingsTab:
         return re.match("^[a-zA-Z0-9_-]*$", newval) is not None
 
     def connect_camera(self):
-        self.s.cam = Camera()
+        self.s.cam = Camera(self.s)
         self.s.cam.initialize()
         print(self.s.cam.error)
         if self.s.cam.error == 0:
@@ -431,13 +442,16 @@ class SettingsTab:
                 print(self.s.xy_connected)
 
 
-class Camera:
+class Camera():
     error = None
     cam = None
+    def __init__(self,settings):
+        self.s = settings
 
     def initialize(self):
         self.error, self.cam = gp.gp_camera_new()
         self.error = gp.gp_camera_init(self.cam)
+
 
     def event_text(self, event_type):
 
@@ -479,6 +493,18 @@ class Camera:
     def file_get(self, pic):
         file = self.cam.file_get(pic.folder, pic.name, gp.GP_FILE_TYPE_NORMAL)
         return file
+
+    def calc_movement_delay(self, x, y, f):
+        """ based on calibration of actual movement time (see settings) xy in mm en speed(F) in mm/min/1.4 """
+        if x > y:
+            maxd = x
+        else:
+            maxd = y
+        mm_sec = f / self.s.xy_f_corr_fact / 60
+        mov_tm = maxd / mm_sec
+        # add (2-3) seconds for shaking movement to stabilize, and round up to the nearest second
+        mov_tm = mov_tm + self.s.cam_capture_delay
+        return mov_tm
 
 
 class Wellplate:
@@ -599,6 +625,7 @@ class Wellplate:
         if interrupt:
             # home the table
             self.home_xy()
+            self.toggle_tab_state("normal")
             return
 
         if nextcap < self.maxcap:
@@ -631,7 +658,7 @@ class Wellplate:
     def move_and_capture(self, x, y, f):
 
         self.goto_position(x, y, f)
-        time.sleep(self.calc_movement_delay(x, y, f))
+        time.sleep(self.s.cam.calc_movement_delay(x, y, f))
         self.capture_image("temp_cap.jpg")
         # self.crop_save_wells_old(1, 12)
         # take the pic
@@ -826,17 +853,6 @@ class Wellplate:
         self.s.ser.write(bytes(gcode, 'utf-8'))
         print(gcode)
 
-    def calc_movement_delay(self, x, y, f):
-        """ based on calibration of actual movement time (see settings) xy in mm en speed(F) in mm/min/1.4 """
-        if x > y:
-            maxd = x
-        else:
-            maxd = y
-        mm_sec = f / self.s.xy_f_corr_fact / 60
-        mov_tm = maxd / mm_sec
-        # add (2-3) seconds for shaking movement to stabilize, and round up to the nearest second
-        mov_tm = mov_tm + self.s.cam_capture_delay
-        return mov_tm
 
     def capture_image(self, picname):
         # take te picture
@@ -855,6 +871,251 @@ class Wellplate:
         self.frame.master.master.tab(tabs[3], state=tabstate)
         self.frame.master.master.tab(tabs[4], state=tabstate)
 
+
+class Stickytrap:
+
+    def __init__(self, parent, settings):
+        #cv2.ocl.setUseOpenCL(False)  # disable opencl to prevent errors
+        # reference the settings object
+        self.s = settings
+        # create the folderstructure if it does not yet exist
+        self.s.create_safe_path()
+        self.pbval = 0
+        self.maxcap = 5  # 4 pict without overlap, 5 up to ~30 mm overlap
+        self.overlap = 20  # (value in mm overlap of pictures)
+
+        self.pbmax = self.maxcap
+
+        self.stthumb_list = self.create_empty_st_list()
+        self.stpic_list = []
+        self.qr = ""
+
+        self.frame = ttk.Frame(parent, padding="3 3 3 3")
+        self.frame.grid(column=0, row=0, sticky=(N, W, E, S))
+        #ttk.Label(self.frame, text="blaat").grid(row=0, column=0)
+
+        self.pb = ttk.Progressbar(self.frame, orient=HORIZONTAL, length=400, mode='determinate', maximum=self.pbmax)
+        self.pb['value'] = 0
+        self.pb.grid(row=2, column=0)
+
+        self.strstp_button = Button(self.frame, text='Start imaging', command=self.start)
+        self.strstp_button.grid(row=2, column=1, sticky=E)
+
+        self.update_st_grid()
+        self.ctr = 0
+
+    def start(self):
+        if not self.s.cam_connected or not self.s.xy_connected:
+            messagebox.showerror("connection error", "XY-table and/or camera not connected\n"
+                                                     "Cannot continue.")
+        else:
+
+            self.pbval = 0
+            self.pb['value'] = self.pbval
+            self.strstp_button.configure(text='Stop', command=self.stop)
+            self.stpic_list.clear()
+            self.stthumb_list.clear()
+
+            global interrupt
+            interrupt = False
+
+            # create the folders
+            self.s.create_project_sample_path()
+            self.ctr = 0
+            # invoke the capturenext function via root.after to allow the eventloop to update the interface
+            self.toggle_tab_state("disabled")
+            root.after(1, self.capture_next)
+
+
+    def stop(self):
+
+        self.strstp_button.configure(text='Start imaging', command=self.start)
+        self.update_st_grid()
+        global interrupt
+        interrupt = True
+        self.pb['value'] = 0
+        self.home_xy()
+        self.toggle_tab_state("normal")
+
+    def capture_next(self, nextcap=0):
+
+        global interrupt
+        if interrupt:
+            # home the table
+            self.home_xy()
+            self.toggle_tab_state("normal")
+            return
+
+        if nextcap < self.maxcap:
+            self.pbval += 1
+            self.pb['value'] = self.pbval
+            x = self.s.xy_st_coords[nextcap][0]
+            y = self.s.xy_st_coords[nextcap][1]
+            if self.overlap > 0:
+                y -= self.overlap * nextcap
+
+            # root.after(1000)
+            print("nextcap: " + str(nextcap) + " xy" + str(x) + " " + str(y))
+            tempfn = "temp_st_pos_" + str(nextcap).zfill(2) + ".jpg"
+            self.move_and_capture(x, y, self.s.xy_f_speed, tempfn)
+            self.crop_save_temp_st(self.ctr, tempfn)
+            self.ctr += 1
+
+        else:
+            self.save_images()
+            self.pb['value'] = self.pbmax
+            print("nextcap: " + str(nextcap))
+            self.strstp_button.configure(text='Start imaging', command=self.start)
+            # home the xy table
+            self.home_xy()
+            self.update_st_grid()
+            #self.stitch_st()
+            interrupt = True
+            self.toggle_tab_state("normal")
+            return
+
+        root.after(1, lambda: self.capture_next(nextcap + 1))
+
+    def home_xy(self):
+        self.s.ser.write(bytes("G28\n", 'utf-8'))
+
+    def move_and_capture(self, x, y, f, tempfn):
+        self.goto_position(x, y, f)
+        time.sleep(self.s.cam.calc_movement_delay(x, y, f))
+        self.capture_image(tempfn)
+        # self.crop_save_wells_old(1, 12)
+        # take the pic
+
+    def crop_save_temp_st(self, capnr, tempfn):
+
+        pos_str = "st_pos_" + str(capnr).zfill(2) + ".jpg"
+        temp_image = cv2.imread(os.path.join(self.s.safe_temp_path, tempfn))
+        temp_image = cv2.rotate(temp_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        qr = self.detect_qr(temp_image)
+        if qr != "":
+            self.qr = qr
+            print("qr-code detected: " + self.qr)
+
+        #crop = temp_image[2300:5200, 800:3700]
+        crop = temp_image
+        save_fn = pos_str + ".jpg"
+            # add project en sample name to the filename if checked
+
+        #cv2.imwrite(os.path.join(self.s.project_sample_path, save_fn), crop)
+        self.stpic_list.append(os.path.join(self.s.safe_temp_path, tempfn))
+        st_thumb = cv2.resize(crop, [300, 200], cv2.INTER_NEAREST)
+        cv2.imwrite(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn), st_thumb)
+        self.stthumb_list.append(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn))
+
+    def save_images(self):
+
+        save_fn = ""
+        if self.s.prj_fn_add:
+            save_fn = self.s.project_name + "_" + self.s.sample_name + "_"
+        if self.qr != "":
+            save_fn = save_fn + self.qr + "_"
+
+        for i in range(self.maxcap):
+            pos_str = "st_pos_" + str(i).zfill(2)
+            temp_fn = "temp_" + pos_str + ".jpg"
+            save2_fn = save_fn + pos_str + ".jpg"
+            os.rename(os.path.join(self.s.safe_temp_path, temp_fn),
+                      os.path.join(self.s.project_sample_path, save2_fn))
+
+    def detect_qr(self, img):
+
+        detect = cv2.QRCodeDetector()
+        val, pts, st_code = detect.detectAndDecode(img)
+        print(val)
+        return val
+
+    def stitch_st(self):
+
+        stitcher = cv2.Stitcher.create(cv2.STITCHER_SCANS)
+        images = []
+
+        for each in self.stpic_list:
+            image = cv2.imread(each)
+            images.append(image)
+        (status, stitched) = stitcher.stitch(image)
+
+        # if the status is '0', then OpenCV successfully performed image
+        # stitching
+        if status == 0:
+            # write the output stitched image to disk
+            #cv2.imwrite("stitch.jpg", stitched)
+            # display the output stitched image to our screen
+            stitched = cv2.resize(stitched, [375, 1000], cv2.INTER_NEAREST)
+            cv2.imshow("Stitched", stitched)
+            cv2.waitKey()
+        # otherwise the stitching failed, likely due to not enough keypoints)
+        # being detected
+        else:
+            print("[INFO] image stitching failed ({})".format(status))
+
+
+    def create_empty_st_list(self):
+        stthumb_list = list()
+        stthumb_list.append("assets/st/empty_1_h250px.png")
+        stthumb_list.append("assets/st/empty_2_h250px.png")
+        stthumb_list.append("assets/st/empty_3_h250px.png")
+        stthumb_list.append("assets/st/empty_4_h250px.png")
+
+        return stthumb_list
+
+    def update_st_grid(self):
+        pic_ctr = 0
+        st_layout = ttk.Frame(self.frame, padding="10 10 10 10")
+        st_layout.grid(column=0, row=0, sticky=(N, W, E, S))
+        root.update_idletasks()
+
+        r = 0
+        for pic in self.stthumb_list:
+            # label plates
+            #plate_string = "postion: " + str(i + 1)
+            #ttk.Label(wp_layout, text=plate_string).grid(row=r, column=c, pady=10)
+            # r += 1
+            # row header with column titles
+                        # header
+            ttk.Label(st_layout, text=str(r)).grid(row=r, column=0)
+            fname = self.stthumb_list[r]
+            pimg = ImageTk.PhotoImage(Image.open(fname))
+            label = ttk.Label(st_layout, image=pimg)
+            label.image = pimg
+            label.grid(row=r, column=1)
+            r += 1
+
+    def goto_position(self, x, y, f):
+
+        x_coord = str(x)
+        y_coord = str(y)
+        f_val = str(f)
+        gcode = 'G0 X' + x_coord + ' Y' + y_coord + ' F' + f_val + '\n'
+        # write out gcode to xytabel serial connection
+        # ser.write(bytes(gcode, 'utf-8'))
+        self.s.ser.write(bytes(gcode, 'utf-8'))
+        print(gcode)
+
+    def capture_image(self, picname):
+        # take te picture
+        file = self.s.cam.capture_and_get()
+        file.save(os.path.join(self.s.safe_temp_path, picname))
+
+        # trick to empty the camera cue before nextaction (see github thread from entangle devloper .....).
+        # Prevents camera crashes.
+        self.s.cam.empty_cam_cue()
+
+    def set_overlap(self, overlap):
+        self.overlap = overlap
+
+
+    def toggle_tab_state(self, tabstate="normal"):
+        tabs = self.frame.master.master.tabs()
+        self.frame.master.master.tab(tabs[0], state=tabstate)
+        self.frame.master.master.tab(tabs[1], state=tabstate)
+        # do not toggle well plate tab 2
+        self.frame.master.master.tab(tabs[3], state=tabstate)
+        self.frame.master.master.tab(tabs[4], state=tabstate)
 
 class Move:
 
