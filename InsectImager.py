@@ -529,15 +529,15 @@ class Wellplate:
         self.nr_crops = None
         self.plate_start_nr = 1
 
-        self.frame = ttk.Frame(parent, padding="3 3 3 3")
+        self.frame = ttk.Frame(parent, padding="10 10 10 10")
         self.frame.grid(column=0, row=0, sticky=(N, W, E, S))
 
         self.pb = ttk.Progressbar(self.frame, orient=HORIZONTAL, length=400, mode='determinate', maximum=self.pbmax)
         self.pb['value'] = 0
-        self.pb.grid(row=2, column=0)
+        self.pb.grid(row=2, column=0, sticky=W)
 
         self.strstp_button = Button(self.frame, text='Start imaging', command=self.start)
-        self.strstp_button.grid(row=2, column=1, sticky=E)
+        self.strstp_button.grid(row=3, column=0, sticky=W, pady=5)
 
         self.wellpic_list = self.create_empty_wellpic_list()
         self.update_wp_grid(self.wellpic_list)
@@ -797,8 +797,8 @@ class Wellplate:
 
     def update_wp_grid(self, wellpic_list):
         pic_ctr = 0
-        wp_layout = ttk.Frame(self.frame, padding="3 3 3 3")
-        wp_layout.grid(column=0, row=0, sticky=(N, W, E, S))
+        wp_layout = ttk.Frame(self.frame, padding="10 3 3 10")
+        wp_layout.grid(column=0, row=1, sticky=(N, W, E, S))
         root.update_idletasks()
 
         if self.wp_type == 6:
@@ -814,27 +814,37 @@ class Wellplate:
             rows = ["A", "B", "C", "D", "E", "F"]
             cols = ["1", "2", "3", "4", "5", "6", "7", "8"]
 
+        wp_lc = ttk.Frame(wp_layout, padding="3 10 10 3")
+        wp_rc = ttk.Frame(wp_layout, padding="3 10 10 3")
+        wp_lc.grid(column=0, row=0, sticky=(N, W, E, S))
+        wp_rc.grid(column=2, row=0, sticky=(N, W, E, S))
+
         r = 0
         c = 0
-        for i in range(self.nr_wp):
+        for p in range(self.nr_wp):
+            if p < 2:
+                gFrame = wp_lc
+            else:
+                gFrame = wp_rc
+
             # label plates
-            plate_string = "postion: " + str(i + 1)
-            ttk.Label(wp_layout, text=plate_string).grid(row=r, column=c, pady=10)
+            plate_string = "position: " + str(p + 1)
+            ttk.Label(gFrame, text=plate_string).grid(row=r, column=c, pady=10)
             # r += 1
             # row header with column titles
             c1 = 1
             for col in cols:
-                ttk.Label(wp_layout, text=col).grid(row=r, column=c1)
+                ttk.Label(gFrame, text=col).grid(row=r, column=c1)
                 c1 += 1
             r += 1
             for row in rows:
                 # header
-                ttk.Label(wp_layout, text=row).grid(row=r, column=c)
+                ttk.Label(gFrame, text=row).grid(row=r, column=c)
                 c += 1
                 for col in cols:
                     fname = wellpic_list[pic_ctr]
                     pimg = ImageTk.PhotoImage(Image.open(fname))
-                    label = ttk.Label(wp_layout, image=pimg)
+                    label = ttk.Label(gFrame, image=pimg)
                     label.image = pimg
                     label.grid(row=r, column=c)
                     pic_ctr += 1
@@ -853,7 +863,6 @@ class Wellplate:
         # ser.write(bytes(gcode, 'utf-8'))
         self.s.ser.write(bytes(gcode, 'utf-8'))
         print(gcode)
-
 
     def capture_image(self, picname):
         # take te picture
@@ -891,16 +900,16 @@ class Stickytrap:
         self.stpic_list = []
         self.qr = ""
 
-        self.frame = ttk.Frame(parent, padding="3 3 3 3")
+        self.frame = ttk.Frame(parent, padding="10 10 10 10")
         self.frame.grid(column=0, row=0, sticky=(N, W, E, S))
         #ttk.Label(self.frame, text="blaat").grid(row=0, column=0)
 
         self.pb = ttk.Progressbar(self.frame, orient=HORIZONTAL, length=400, mode='determinate', maximum=self.pbmax)
         self.pb['value'] = 0
-        self.pb.grid(row=2, column=0)
+        self.pb.grid(row=2, column=0, sticky=W)
 
         self.strstp_button = Button(self.frame, text='Start imaging', command=self.start)
-        self.strstp_button.grid(row=2, column=1, sticky=E)
+        self.strstp_button.grid(row=3, column=0, sticky=W, pady=5)
 
         self.update_st_grid()
         self.ctr = 0
@@ -1005,6 +1014,7 @@ class Stickytrap:
         #cv2.imwrite(os.path.join(self.s.project_sample_path, save_fn), crop)
         self.stpic_list.append(os.path.join(self.s.safe_temp_path, tempfn))
         st_thumb = cv2.resize(crop, [300, 200], cv2.INTER_NEAREST)
+        st_thumb = cv2.rotate(cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv2.imwrite(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn), st_thumb)
         self.stthumb_list.append(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn))
 
@@ -1070,7 +1080,7 @@ class Stickytrap:
         st_layout.grid(column=0, row=0, sticky=(N, W, E, S))
         root.update_idletasks()
 
-        r = 0
+        c = 0
         for pic in self.stthumb_list:
             # label plates
             #plate_string = "postion: " + str(i + 1)
@@ -1078,13 +1088,13 @@ class Stickytrap:
             # r += 1
             # row header with column titles
                         # header
-            ttk.Label(st_layout, text=str(r)).grid(row=r, column=0)
-            fname = self.stthumb_list[r]
+            ttk.Label(st_layout, text=str(c)).grid(row=0, column=c)
+            fname = self.stthumb_list[c]
             pimg = ImageTk.PhotoImage(Image.open(fname))
             label = ttk.Label(st_layout, image=pimg)
             label.image = pimg
-            label.grid(row=r, column=1)
-            r += 1
+            label.grid(row=1, column=c)
+            c += 1
 
     def goto_position(self, x, y, f):
 
