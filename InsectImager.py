@@ -1014,7 +1014,7 @@ class Stickytrap:
         #cv2.imwrite(os.path.join(self.s.project_sample_path, save_fn), crop)
         self.stpic_list.append(os.path.join(self.s.safe_temp_path, tempfn))
         st_thumb = cv2.resize(crop, [300, 200], cv2.INTER_NEAREST)
-        st_thumb = cv2.rotate(cv2.ROTATE_90_COUNTERCLOCKWISE)
+        st_thumb = cv2.rotate(st_thumb, cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv2.imwrite(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn), st_thumb)
         self.stthumb_list.append(os.path.join(self.s.safe_temp_path, "thumb_" + save_fn))
 
