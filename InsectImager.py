@@ -67,8 +67,8 @@ class Settings:
     project_name = "default-project"   # project name
     sample_name = "default-sample"  # sample name
     project_sample_path = os.path.join(safe_path, project_name, sample_name)
-    prj_fn_add = True  # setting to add the project ande sample name to the filename (default = yes)
-    append_files = True  # setting increment platenames when existing files are present in the folder
+    prj_fn_add = True  # setting to add the project and sample name to the filename (default = yes)
+    append_files = True  # setting increment plate names when existing files are present in the folder
 
     #############################
     # camera details            #
@@ -283,6 +283,7 @@ class SettingsTab:
 
         def callback_upd_prj_name(var, index, mode):
             self.upd_prj_name()
+
         self.prj_name.trace_add("write", callback_upd_prj_name)
 
         self.sp_name = StringVar()
@@ -1127,6 +1128,7 @@ class Stickytrap:
         # do not toggle well plate tab 2
         self.frame.master.master.tab(tabs[3], state=tabstate)
         self.frame.master.master.tab(tabs[4], state=tabstate)
+
 
 class Move:
 
